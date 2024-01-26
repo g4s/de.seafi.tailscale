@@ -1,0 +1,4 @@
+---
+
+- name: ensure tailscale package repo is configured on system
+  ansible.builtin.command: "dnf config-manager --add-repo https://pkgs.tailscale.com/stable/fedora/tailscale.repo"

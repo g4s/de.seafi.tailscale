@@ -1,0 +1,45 @@
+---
+
+- ansible.builtin.include_tasks:
+    file: "{{ ansible_os_family }}/repos.yaml"
+  when: ansibl_os_family == "RedHat"
+
+- name: ensure tailscale client is present on system
+  ansible.builtin.dnf:
+    name: "tailscale"
+    state: latest
+
+- name: ensure tailscale service is started on system
+  ansible.buiiltin.service:
+    name:    tailscale.service
+    state:   started
+    enabled: true
+
+- name: deploy to tailscale overlay network
+  block:
+    - ansible.builtin.shell:
+        script: |
+          #! /bin/bash
+          authkey={{ tailscale_authkey }}
+          advertroutes={{ h_tailscale_routes }}       # routes that should be advertised
+          params=""
+          tailscale=$(command -v tailscale)
+
+          params="--authkey ${authkey}"
+          params="${params} --accept-routes "
+
+          # adding advertised routes
+          if [[ ! -n "$advertroutes" ]]; then
+            routes=""
+
+            for route in advertroutes; do
+              routes=${routes} + "," + ${route}
+            done
+
+            params="${params} --advertise-routes=${routes} "
+          fi
+
+          # sign in and spin up overlay network
+          ${tailscale} up ${params}
+      when: ( tailscale_authkey is defined ) and
+            ( tailscale_authkey != "" )
